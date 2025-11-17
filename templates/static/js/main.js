@@ -125,3 +125,58 @@ const logsBox = document.getElementById("logs-box");
 if (logsBox) {
   logsBox.scrollTop = logsBox.scrollHeight;
 }
+
+// ==============================
+//  POLLING PARA ACTUALIZAR ÓRDENES Y LOGS EN TIEMPO REAL
+// ==============================
+
+document.addEventListener("DOMContentLoaded", () => {
+  function actualizarEstado() {
+    fetch("/estado-json")
+      .then((r) => r.json())
+      .then((data) => {
+        // Actualizar logs
+        const logsBox = document.getElementById("logs-box");
+        if (logsBox && Array.isArray(data.logs)) {
+          // Solo pintamos exactamente lo que el backend ya tiene
+          logsBox.innerHTML = "";
+          data.logs.forEach((linea) => {
+            const div = document.createElement("div");
+            div.textContent = linea;
+            logsBox.appendChild(div);
+          });
+          logsBox.scrollTop = logsBox.scrollHeight;
+        }
+
+        // Actualizar tabla de órdenes
+        const tbody = document.getElementById("orders-tbody");
+        if (tbody && Array.isArray(data.orders)) {
+          tbody.innerHTML = "";
+          data.orders.forEach((o) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${o.id}</td>
+              <td>${o.description}</td>
+              <td>${o.prep_time}</td>
+              <td>${o.priority}</td>
+              <td>${o.worker_id ?? ""}</td>
+              <td>${o.status}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+
+        // (Opcional) Si quieres saber visualmente si aún está procesando:
+        // const badge = document.getElementById("processing-badge");
+        // if (badge) {
+        //   badge.style.display = data.processing ? "inline-block" : "none";
+        // }
+      })
+      .catch((err) => {
+        console.error("Error consultando /estado-json:", err);
+      });
+  }
+
+// Refrescar estado cada 1 segundo (1000 ms)
+setInterval(actualizarEstado, 1000);
+});

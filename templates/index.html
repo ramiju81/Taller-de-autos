@@ -73,11 +73,11 @@
                     <div class="form-field inline">
                         <label for="priority">Prioridad</label>
                         <select id="priority" name="priority" autocomplete="off" required>
-                          <option value="" selected disabled>Selecciona prioridad</option>
-                          <option value="1">1 - Baja</option>
-                          <option value="2">2 - Media</option>
-                          <option value="3">3 - Alta</option>
-                        </select>
+                        <option value="" selected disabled>Selecciona prioridad</option>
+                        <option value="1">1 - Baja</option>
+                        <option value="2">2 - Media</option>
+                        <option value="3">3 - Alta</option>
+                      </select>
 
                     </div>
 
@@ -120,23 +120,17 @@
                                 <th>Taller</th>
                             </tr>
                             </thead>
-                            <tbody>
-                            {% for o in orders %}
-                                <tr class="status-{{ o.status|lower }}">
-                                    <td>#{{ o.id }}</td>
-                                    <td>{{ o.description }}</td>
-                                    <td>{{ o.prep_time }}</td>
-                                    <td>{{ o.priority }}</td>
-                                    <td>{{ o.status }}</td>
-                                    <td>
-                                        {% if o.worker_id %}
-                                            Taller {{ o.worker_id }}
-                                        {% else %}
-                                            —
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
+                            <tbody id="orders-tbody">
+                              {% for o in orders %}
+                              <tr>
+                                <td>{{ o.id }}</td>
+                                <td>{{ o.description }}</td>
+                                <td>{{ o.prep_time }}</td>
+                                <td>{{ o.priority }}</td>
+                                <td>{{ o.worker_id }}</td>
+                                <td>{{ o.status }}</td>
+                              </tr>
+                              {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -157,9 +151,9 @@
 
                 {% if logs %}
                     <div id="logs-box" class="logs-box">
-                        {% for line in logs %}
-                            <div class="log-line">{{ line }}</div>
-                        {% endfor %}
+                      {% for line in logs %}
+                        <div>{{ line }}</div>
+                      {% endfor %}
                     </div>
                 {% else %}
                     <p class="empty-text">

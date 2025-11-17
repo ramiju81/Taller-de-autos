@@ -1,5 +1,6 @@
 import threading
 import queue
+import time 
 
 # ==============================
 #  MODELO DE ORDEN
@@ -131,7 +132,10 @@ def _log(line: str):
 
 
 def procesar_orden(worker_id: int, order: Order):
-    """Simula el trabajo de un taller sobre una orden."""
+    """
+    Simula el trabajo del taller sumando de 0.1 en 0.1 hasta llegar al tiempo lógico indicado.
+    Ejemplo: prep_time=30  →  0.1, 0.2, 0.3 ... 30.0
+    """
     # marcar como "En proceso"
     with _state_lock:
         order.status = "En proceso"
@@ -141,22 +145,23 @@ def procesar_orden(worker_id: int, order: Order):
         f"tiempo lógico {order.prep_time}."
     )
 
-    # 🔁 BUCLE DE CÓMPUTO: suma 1 → N (N = prep_time)
-    # Ej: prep_time = 30 → unidad = 1..30, y SOLO al terminar se marca completada
-    for unidad in range(1, order.prep_time + 1):
-        contador = 0
-        # bucle interno para que el hilo “trabaje”
-        while contador < 200_000:
-            contador += 1
-        # NO mostramos estos pasos intermedios en el log, como pediste.
+    # 🔥 Suma incremental real de 0.1 en 0.1
+    progreso = 0.0
+    objetivo = float(order.prep_time)
 
-    # cuando termina el bucle, la orden está completada
+    while progreso < objetivo:
+        progreso += 0.1
+        # Pequeña pausa para que el avance sea real
+        time.sleep(0.01)     # 0.01 segundos por cada incremento de 0.1
+                             # → 10 incrementos por segundo
+                             # → 1 unidad lógica = ~1s real
+
+    # Cuando termina la suma, se marca como completada
     with _state_lock:
         order.status = "Completada"
         order.worker_id = worker_id
 
     _log(f"✅ Taller {worker_id} finaliza orden {order.id} ({order.description}).")
-
 
 def _worker_loop(worker_id: int, orders_queue: "queue.Queue[Order]"):
     """Función que ejecuta cada hilo (cada taller)."""
@@ -170,14 +175,22 @@ def _worker_loop(worker_id: int, orders_queue: "queue.Queue[Order]"):
         orders_queue.task_done()
 
 
-def process_orders(num_workers: int = 3):
+def process_orders():
     """
     Toma las órdenes pendientes y las procesa con 3 hilos (3 talleres).
     Respeta prioridad (3 alta, 2 media, 1 baja) y luego el orden de llegada.
+    Deja todo registrado en _logs y actualiza el estado de las órdenes.
+    Al final genera un informe con:
+      - número de órdenes,
+      - tiempo lógico total,
+      - tiempo lógico promedio,
+      - tiempo real aproximado de ejecución.
     """
+
     with _state_lock:
         _logs.clear()
 
+        # reiniciamos estados antes de simular
         for o in _orders:
             o.status = "Pendiente"
             o.worker_id = None
@@ -188,20 +201,30 @@ def process_orders(num_workers: int = 3):
         _log("⚠ No hay órdenes para procesar.")
         return
 
+    # Datos para el informe
+    total_ordenes = len(orders_snapshot)
+    tiempo_logico_total = sum(o.prep_time for o in orders_snapshot)
+
+    # Mensaje general que pediste
     _log("🔓 Ya abrieron los 3 talleres y recibieron las primeras órdenes.")
 
-    # ⭐ PRIORIDAD: 3 > 2 > 1, luego ID (orden de llegada)
+    # Ordenamos por prioridad (3 > 2 > 1) y luego por ID
     pendientes = sorted(
         orders_snapshot,
         key=lambda o: (-o.priority, o.id)
     )
 
+    # Cola compartida
     orders_queue: "queue.Queue[Order]" = queue.Queue()
     for order in pendientes:
         orders_queue.put(order)
 
+    # Medir tiempo real de la simulación
+    inicio_real = time.time()
+
+    # Tres hilos: Taller 1, 2 y 3
     threads = []
-    for worker_id in range(1, num_workers + 1):
+    for worker_id in range(1, 4):
         t = threading.Thread(target=_worker_loop, args=(worker_id, orders_queue))
         t.start()
         threads.append(t)
@@ -210,7 +233,22 @@ def process_orders(num_workers: int = 3):
     for t in threads:
         t.join()
 
-    _log("🏁 Simulación finalizada: todas las órdenes fueron atendidas.")
+    fin_real = time.time()
+    tiempo_real = fin_real - inicio_real
+
+    # Calcular promedio lógico
+    promedio_logico = (
+        tiempo_logico_total / total_ordenes if total_ordenes else 0
+    )
+
+    # Informe final detallado
+    _log(
+        "🏁 Simulación finalizada: "
+        f"{total_ordenes} órdenes atendidas. "
+        f"Tiempo lógico total: {tiempo_logico_total} unidades. "
+        f"Tiempo lógico promedio por orden: {promedio_logico:.2f} unidades. "
+        f"Tiempo real aproximado de ejecución: {tiempo_real:.2f} segundos."
+    )
 
 
 # ==============================
@@ -249,3 +287,66 @@ def simular_taller(num_workers: int = 3, ordenes_data=None):
             }
         )
     return out_orders, snapshot_logs
+
+# ==============================
+#  SOPORTE PARA PROCESO ASÍNCRONO + EXPORTAR ESTADO
+# ==============================
+
+_processing = False  # indica si hay una simulación corriendo
+
+
+def export_state():
+    """
+    Devuelve el estado en formato listo para JSON:
+    - órdenes como dicts
+    - logs como lista de strings
+    """
+    with _state_lock:
+        orders_snapshot = list(_orders)
+        logs_snapshot = list(_logs)
+
+    out_orders = []
+    for o in orders_snapshot:
+        out_orders.append(
+            {
+                "id": o.id,
+                "description": o.description,
+                "prep_time": o.prep_time,
+                "priority": o.priority,
+                "status": o.status,
+                "worker_id": o.worker_id,
+            }
+        )
+    return out_orders, logs_snapshot
+
+
+def is_processing():
+    """Indica si hay una simulación en curso."""
+    with _state_lock:
+        return _processing
+
+
+def start_async_processing():
+    """
+    Lanza process_orders() en un hilo aparte.
+    No bloquea la petición HTTP.
+    """
+
+    global _processing
+
+    with _state_lock:
+        if _processing:
+            # ya hay una simulación corriendo, no lanzar otra
+            return
+        _processing = True
+
+    def _run():
+        global _processing
+        try:
+            process_orders()
+        finally:
+            with _state_lock:
+                _processing = False
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()

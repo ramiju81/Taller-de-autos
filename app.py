@@ -5,6 +5,9 @@ from taller_autos import (
     process_orders,
     reset_state,
     get_tasks,
+    export_state,       
+    is_processing,      
+    start_async_processing, 
 )
 
 app = Flask(
@@ -32,8 +35,11 @@ def add_order_route():
 
 @app.route("/process-orders", methods=["POST"])
 def process_orders_route():
-    process_orders()
+    # Lanza la simulación en segundo plano
+    start_async_processing()
+    # Regresa de una vez al HTML
     return redirect(url_for("index"))
+
 
 
 @app.route("/reset", methods=["POST"])
@@ -44,3 +50,20 @@ def reset_route():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True)
+
+@app.route("/estado-json", methods=["GET"])
+def estado_json():
+    """
+    Devuelve:
+      - si está procesando
+      - órdenes como dicts
+      - logs como lista de strings
+    """
+    orders, logs = export_state()
+    return jsonify(
+        {
+            "processing": is_processing(),
+            "orders": orders,
+            "logs": logs,
+        }
+    )
