@@ -1,68 +1,46 @@
 from flask import Flask, render_template, request, redirect, url_for
-from taller_autos import simular_taller
+from taller_autos import (
+    get_state,
+    add_order,
+    process_orders,
+    reset_state,
+    get_tasks,
+)
 
-app = Flask(__name__)
-
-ORDERS = []   # lista de dicts
-NEXT_ID = 1
-LOGS = []
+app = Flask(
+    __name__,
+    template_folder="templates",
+    static_folder="templates/static",
+)
 
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", orders=ORDERS, logs=LOGS)
+    orders, logs = get_state()
+    tasks = get_tasks()
+    return render_template("index.html", orders=orders, logs=logs, tasks=tasks)
 
 
 @app.route("/add-order", methods=["POST"])
-def add_order():
-    global NEXT_ID
-
-    description = request.form.get("description", "").strip()
-    prep_time = request.form.get("prep_time", "").strip()
-    priority = request.form.get("priority", "").strip()
-
-    if not description:
-        return redirect(url_for("index"))
-
-    if not prep_time.isdigit():
-        prep_time = "1"
-    if not priority.isdigit():
-        priority = "1"
-
-    order = {
-        "id": NEXT_ID,
-        "description": description,
-        "prep_time": int(prep_time),
-        "priority": int(priority),
-        "status": "Pendiente",
-        "worker_id": None,
-    }
-    ORDERS.append(order)
-    NEXT_ID += 1
-
+def add_order_route():
+    desc = request.form.get("description")
+    prep_time = request.form.get("prep_time")
+    priority = request.form.get("priority")
+    add_order(desc, prep_time, priority)
     return redirect(url_for("index"))
 
 
 @app.route("/process-orders", methods=["POST"])
-def process_orders():
-    global ORDERS, LOGS
-
-    if not ORDERS:
-        LOGS = ["No hay órdenes registradas."]
-        return redirect(url_for("index"))
-
-    ORDERS, LOGS = simular_taller(num_workers=3, orders=ORDERS)
+def process_orders_route():
+    process_orders()
     return redirect(url_for("index"))
 
 
 @app.route("/reset", methods=["POST"])
-def reset():
-    global ORDERS, NEXT_ID, LOGS
-    ORDERS = []
-    NEXT_ID = 1
-    LOGS = []
+def reset_route():
+    reset_state()
     return redirect(url_for("index"))
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", debug=True)
