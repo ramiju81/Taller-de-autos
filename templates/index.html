@@ -56,6 +56,7 @@
                             type="text"
                             placeholder="Escribe o elige un trabajo típico"
                             autocomplete="off"
+                            required
                         >
 
                         <!-- Botoncito tipo desplegable, como prioridad -->
@@ -84,13 +85,14 @@
                         placeholder="Tiempo en minutos"
                         value=""
                         autocomplete="off"
+                        required
                     />
                 </div>
 
                 <!-- Prioridad -->
                 <div class="form-field inline">
                     <label for="priority">Prioridad</label>
-                    <select id="priority" name="priority" autocomplete="off">
+                    <select id="priority" name="priority" autocomplete="off" required>
                         <option value="" selected disabled>Selecciona prioridad</option>
                         <option value="1">1 - Baja</option>
                         <option value="2">2 - Media</option>

@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // ====== Cargar tareas desde el JSON embebido ======
+  // ====== 1. Cargar tareas desde el JSON embebido ======
   let TASKS = [];
   const tasksScript = document.getElementById("tasks-data");
   if (tasksScript) {
@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Mapa nombre -> {time, priority}
+  // Mapa: nombre en minúsculas -> { time, priority }
   const TASKS_MAP = TASKS.reduce((acc, t) => {
     if (t && t.name) {
       acc[t.name.toLowerCase()] = {
@@ -26,13 +26,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return acc;
   }, {});
 
+  // Referencias a elementos principales del formulario
   const descInput   = document.getElementById("description");
   const timeInput   = document.getElementById("prep_time");
   const prioSelect  = document.getElementById("priority");
   const sugList     = document.getElementById("order-suggestions");
   const dropdownBtn = document.getElementById("btn-desc-dropdown");
 
-  // ====== Sugerencias bajo Trabajo / orden ======
+  // ====== 2. Lógica de sugerencias para Trabajo / orden ======
   function renderSuggestions(filterText) {
     if (!sugList || !descInput) return;
 
@@ -59,9 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const li = document.createElement("li");
       li.textContent = t.name;
 
-      // Al hacer click en una sugerencia
       li.addEventListener("mousedown", (ev) => {
-        ev.preventDefault();
+        ev.preventDefault(); // evita perder el foco antes de asignar
         descInput.value = t.name || "";
 
         if (timeInput && t.time != null) {
@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (descInput && sugList) {
-    // Mientras se escribe, filtra sugerencias
+    // Cuando escribe, filtramos
     descInput.addEventListener("input", () => {
       const v = descInput.value;
       if (!v.trim()) {
@@ -91,68 +91,65 @@ document.addEventListener("DOMContentLoaded", () => {
       renderSuggestions(v);
     });
 
-    // Al enfocar, muestra sugerencias según lo escrito
+    // Al enfocar el campo, mostramos sugerencias (según lo escrito)
     descInput.addEventListener("focus", () => {
       const v = descInput.value;
-      if (v.trim()) {
-        renderSuggestions(v);
-      }
+      renderSuggestions(v);
     });
 
-    // Al salir del campo, cerrar sugerencias con un pequeño delay
+    // Al salir del campo cerramos con un pequeño delay
     descInput.addEventListener("blur", () => {
       setTimeout(() => {
         sugList.style.display = "none";
       }, 120);
     });
 
-    // Si se escribe EXACTAMENTE el nombre de una tarea, carga tiempo/prioridad
+    // Si escribe exactamente el nombre de una tarea, rellenamos tiempo y prioridad
     descInput.addEventListener("change", () => {
       const v = (descInput.value || "").trim().toLowerCase();
       const info = TASKS_MAP[v];
       if (info) {
         if (timeInput) timeInput.value = info.time;
-        if (prioSelect) prioSelect.value = info.priority;
+        if (prioSelect) prioSelect.value = String(info.priority);
       }
     });
 
-    // Cerrar sugerencias si se hace click fuera
+    // Cerrar sugerencias si hace click fuera
     document.addEventListener("click", (ev) => {
       if (
         ev.target !== descInput &&
         ev.target !== sugList &&
-        !sugList.contains(ev.target)
+        !sugList.contains(ev.target) &&
+        ev.target !== dropdownBtn
       ) {
         sugList.style.display = "none";
       }
     });
   }
 
-  // ====== Botoncito ▾ para abrir lista completa ======
+  // Botón ▾ para abrir lista (tipo select)
   if (dropdownBtn && sugList && descInput) {
     dropdownBtn.addEventListener("click", () => {
-      // si ya está visible, la cerramos
       if (sugList.style.display === "block") {
         sugList.style.display = "none";
         return;
       }
-      // mostrar todas las tareas sin filtro
-      renderSuggestions("");
+      // Mostrar todas las tareas o filtradas por lo que haya escrito
+      const v = descInput.value;
+      renderSuggestions(v);
       descInput.focus();
     });
   }
 
-  // ====== Botón Actualizar (recarga la página) + ocultarlo si ya no hay pendientes ======
-  const refreshBtn = document.getElementById("btn-refresh");
-  const ordersWrapper = document.querySelector(".card-orders .table-wrapper");
+  // ====== 3. Botón Actualizar y auto-scroll de tabla ======
+  const refreshBtn     = document.getElementById("btn-refresh");
+  const ordersWrapper  = document.querySelector(".card-orders .table-wrapper");
 
-  // Auto-scroll de la tabla para que siempre se vea lo último
   if (ordersWrapper) {
     ordersWrapper.scrollTop = ordersWrapper.scrollHeight;
   }
 
   if (refreshBtn) {
-    // Revisar si hay alguna orden NO completada
     const estados = Array.from(
       document.querySelectorAll("#orders-tbody tr td:nth-child(5)")
     );
@@ -160,7 +157,6 @@ document.addEventListener("DOMContentLoaded", () => {
       td.textContent.trim().toLowerCase() !== "completada"
     );
 
-    // Si todas están completadas, esconder el botón
     if (!hasPending) {
       refreshBtn.style.display = "none";
     } else {
@@ -171,9 +167,85 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ====== Auto-scroll de logs al final ======
+  // ====== 4. Auto-scroll de logs ======
   const logsBox = document.getElementById("logs-box");
   if (logsBox) {
     logsBox.scrollTop = logsBox.scrollHeight;
+  }
+
+  // ====== 5. Validación: Agregar orden solo con 3 campos diligenciados ======
+  const addOrderForm = document.getElementById("add-order-form");
+
+  function camposFormularioValidos() {
+    const descVal = descInput ? descInput.value.trim() : "";
+    const timeVal = timeInput ? timeInput.value.trim() : "";
+    const prioVal = prioSelect ? prioSelect.value : "";
+
+    const timeNum = parseInt(timeVal, 10);
+
+    if (!descVal || !timeVal || isNaN(timeNum) || timeNum <= 0 || !prioVal) {
+      return false;
+    }
+    return true;
+  }
+
+  if (addOrderForm) {
+    addOrderForm.addEventListener("submit", (ev) => {
+      if (!camposFormularioValidos()) {
+        ev.preventDefault();
+        alert(
+          "Para agregar una orden debes diligenciar:\n" +
+          "- Trabajo / orden\n" +
+          "- Tiempo de Orden (mayor a 0)\n" +
+          "- Prioridad."
+        );
+      }
+    });
+  }
+
+  // ====== 6. Validación y flujo doble: Procesar órdenes ======
+  // Este es el form pequeño que está al lado del botón Agregar
+  const processForm = document.querySelector(".form-actions-row form[action]");
+  if (processForm) {
+    processForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+
+      const tbody   = document.getElementById("orders-tbody");
+      const hasRows = tbody && tbody.querySelectorAll("tr").length > 0;
+      const formOk  = camposFormularioValidos();
+
+      // Si NO hay filas y NO hay formulario diligenciado -> no se puede procesar
+      if (!hasRows && !formOk) {
+        alert(
+          "No hay órdenes para procesar.\n" +
+          "Primero registra al menos una orden diligenciando los 3 campos."
+        );
+        return;
+      }
+
+      // Si el formulario está diligenciado, primero agregamos la orden vía fetch
+      if (formOk && addOrderForm && addOrderForm.action) {
+        try {
+          const formData = new FormData(addOrderForm);
+          const resp = await fetch(addOrderForm.action, {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!resp.ok) {
+            console.error("Error al agregar la orden antes de procesar:", resp.status);
+            alert("Ocurrió un error agregando la orden. Intenta nuevamente.");
+            return;
+          }
+        } catch (err) {
+          console.error("Error de red al agregar la orden:", err);
+          alert("Ocurrió un error de red agregando la orden. Intenta nuevamente.");
+          return;
+        }
+      }
+
+      // Ahora sí, enviamos el form de procesar órdenes al backend
+      processForm.submit();
+    });
   }
 });
