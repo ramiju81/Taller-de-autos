@@ -15,8 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Mapa nombre -> {time, priority}
   const TASKS_MAP = TASKS.reduce((acc, t) => {
-    if (t.name) {
+    if (t && t.name) {
       acc[t.name.toLowerCase()] = {
         time: t.time || 1,
         priority: t.priority || 1,
@@ -25,10 +26,11 @@ document.addEventListener("DOMContentLoaded", () => {
     return acc;
   }, {});
 
-  const descInput = document.getElementById("description");
-  const timeInput = document.getElementById("prep_time");
-  const prioSelect = document.getElementById("priority");
-  const sugList = document.getElementById("order-suggestions");
+  const descInput   = document.getElementById("description");
+  const timeInput   = document.getElementById("prep_time");
+  const prioSelect  = document.getElementById("priority");
+  const sugList     = document.getElementById("order-suggestions");
+  const dropdownBtn = document.getElementById("btn-desc-dropdown");
 
   // ====== Sugerencias bajo Trabajo / orden ======
   function renderSuggestions(filterText) {
@@ -126,12 +128,47 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ====== Botón Actualizar (recarga la página) ======
-  const refreshBtn = document.getElementById("btn-refresh");
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", () => {
-      window.location.reload();
+  // ====== Botoncito ▾ para abrir lista completa ======
+  if (dropdownBtn && sugList && descInput) {
+    dropdownBtn.addEventListener("click", () => {
+      // si ya está visible, la cerramos
+      if (sugList.style.display === "block") {
+        sugList.style.display = "none";
+        return;
+      }
+      // mostrar todas las tareas sin filtro
+      renderSuggestions("");
+      descInput.focus();
     });
+  }
+
+  // ====== Botón Actualizar (recarga la página) + ocultarlo si ya no hay pendientes ======
+  const refreshBtn = document.getElementById("btn-refresh");
+  const ordersWrapper = document.querySelector(".card-orders .table-wrapper");
+
+  // Auto-scroll de la tabla para que siempre se vea lo último
+  if (ordersWrapper) {
+    ordersWrapper.scrollTop = ordersWrapper.scrollHeight;
+  }
+
+  if (refreshBtn) {
+    // Revisar si hay alguna orden NO completada
+    const estados = Array.from(
+      document.querySelectorAll("#orders-tbody tr td:nth-child(5)")
+    );
+    const hasPending = estados.some((td) =>
+      td.textContent.trim().toLowerCase() !== "completada"
+    );
+
+    // Si todas están completadas, esconder el botón
+    if (!hasPending) {
+      refreshBtn.style.display = "none";
+    } else {
+      refreshBtn.style.display = "inline-block";
+      refreshBtn.addEventListener("click", () => {
+        window.location.reload();
+      });
+    }
   }
 
   // ====== Auto-scroll de logs al final ======
