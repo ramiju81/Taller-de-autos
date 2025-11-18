@@ -12,138 +12,153 @@
 </head>
 <body>
 <div class="app-shell">
+    <!-- HEADER -->
     <header class="app-header">
-        <div class="app-header-icon">🚗</div>
-        <div>
-            <h1 class="app-title">Taller de Autos Concurrente</h1>
-            <p class="app-subtitle">
-                Simulación de asignación de órdenes con 3 talleres (3 hilos).
-            </p>
+        <div class="app-header-main">
+            <div class="app-header-icon">🚗</div>
+            <div class="app-header-text">
+                <h1 class="app-title">Taller de Autos Concurrente</h1>
+                <p class="app-subtitle">
+                    Asignación de órdenes con 3 talleres.
+                </p>
+            </div>
         </div>
     </header>
 
+    <!-- MAIN -->
     <main class="app-main">
-        <!-- PANEL IZQUIERDO: FORMULARIO Y ÓRDENES -->
-        <section class="column column-left">
+        <!-- 1. REGISTRAR ORDEN -->
+        <section class="card panel-fijo card-form">
+            <div class="card-header">
+                <h2>Registrar orden</h2>
+                <p class="card-caption">
+                    Órdenes registradas:
+                    <span class="badge">
+                        {{ orders|length }}
+                    </span>
+                </p>
+            </div>
 
-            <!-- Registrar orden -->
-            <section class="card">
-                <div class="card-header">
-                    <h2>Registrar orden</h2>
-                    <p class="card-caption">
-                        Órdenes registradas:
-                        <span class="badge">
-                            {{ orders|length }}
-                        </span>
-                    </p>
+            <!-- UN SOLO FORM: Agregar y Procesar comparten campos -->
+            <form id="order-form" class="form-grid" method="post">
+                <!-- Trabajo / orden (SELECT) -->
+                <div class="form-field">
+                    <label for="description">Trabajo / orden</label>
+                    <select id="description" name="description" required>
+                        <option value="" selected disabled>Selecciona un trabajo típico</option>
+                        {% for t in tasks %}
+                            <option value="{{ t.name }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
-                <form class="form-grid" action="{{ url_for('add_order_route') }}" method="post">
-                    <!-- Trabajo / orden -->
-                    <div class="form-field">
-                        <label for="description">Trabajo / orden</label>
-                        <div class="input-with-dropdown">
-                            <input
-                                id="description"
-                                name="description"
-                                type="text"
-                                placeholder="Escribe o elige un trabajo típico"
-                                autocomplete="off"
-                            >
-                            <ul id="order-suggestions" class="suggestions-list"></ul>
-                        </div>
-                    </div>
+                <!-- Tiempo de Orden -->
+                <div class="form-field inline">
+                    <label for="prep_time">Tiempo de Orden</label>
+                    <input
+                        type="number"
+                        id="prep_time"
+                        name="prep_time"
+                        min="1"
+                        placeholder="Tiempo en minutos"
+                        autocomplete="off"
+                        required
+                    />
+                </div>
 
-                    <!-- Tiempo lógico -->
-                    <div class="form-field inline">
-                        <label for="prep_time">Tiempo lógico (unidades simuladas)</label>
-                        <input
-                          type="number"
-                          id="prep_time"
-                          name="prep_time"
-                          min="1"
-                          placeholder="Tiempo lógico (1 → N)"
-                          value=""
-                          autocomplete="off"
-                        />
-
-                    </div>
-
-                    <!-- Prioridad -->
-                    <div class="form-field inline">
-                        <label for="priority">Prioridad</label>
-                        <select id="priority" name="priority" autocomplete="off" required>
+                <!-- Prioridad -->
+                <div class="form-field inline">
+                    <label for="priority">Prioridad</label>
+                    <select id="priority" name="priority" required>
                         <option value="" selected disabled>Selecciona prioridad</option>
                         <option value="1">1 - Baja</option>
                         <option value="2">2 - Media</option>
                         <option value="3">3 - Alta</option>
-                      </select>
-
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn primary">
-                            Agregar orden
-                        </button>
-                    </div>
-                </form>
-
-                <form class="form-actions dual" action="{{ url_for('process_orders_route') }}" method="post">
-                    <button type="submit" class="btn success">
-                        Procesar órdenes
-                    </button>
-                </form>
-
-                <form class="form-actions dual" action="{{ url_for('reset_route') }}" method="post">
-                    <button type="submit" class="btn ghost">
-                        Reiniciar simulación
-                    </button>
-                </form>
-            </section>
-
-            <!-- Órdenes registradas -->
-            <section class="card">
-                <div class="card-header">
-                    <h2>Órdenes registradas</h2>
+                    </select>
                 </div>
 
-                {% if orders %}
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Descripción</th>
-                                <th>Tiempo</th>
-                                <th>Prioridad</th>
-                                <th>Estado</th>
-                                <th>Taller</th>
-                            </tr>
-                            </thead>
-                            <tbody id="orders-tbody">
-                              {% for o in orders %}
-                              <tr>
+                <!-- Botones Agregar / Procesar en la misma fila -->
+                <div class="form-actions-row">
+                    <!-- ESTE CREA LA ORDEN (usa campos + required) -->
+                    <button
+                        type="submit"
+                        class="btn primary"
+                        formaction="{{ url_for('add_order_route') }}"
+                    >
+                        Agregar orden
+                    </button>
+
+                    <!-- ESTE SOLO PROCESA LO QUE YA ESTÉ EN LISTA (NO CREA ORDEN) -->
+                    <button
+                        type="submit"
+                        class="btn success"
+                        formaction="{{ url_for('process_orders_route') }}"
+                        formnovalidate
+                    >
+                        Procesar órdenes
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 2. ÓRDENES REGISTRADAS -->
+        <section class="card panel-fijo card-orders">
+            <div class="card-header">
+                <h2>Órdenes registradas</h2>
+            </div>
+
+            {% if orders %}
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Descripción</th>
+                            <th>Tiempo</th>
+                            <th>Prioridad</th>
+                            <th>Estado</th>
+                            <th>Taller</th>
+                        </tr>
+                        </thead>
+                        <tbody id="orders-tbody">
+                        {% for o in orders %}
+                            <tr class="status-{{ 'completada' if o.status == 'Completada' else 'pendiente' }}">
                                 <td>{{ o.id }}</td>
                                 <td>{{ o.description }}</td>
                                 <td>{{ o.prep_time }}</td>
                                 <td>{{ o.priority }}</td>
-                                <td>{{ o.worker_id }}</td>
                                 <td>{{ o.status }}</td>
-                              </tr>
-                              {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p class="empty-text">
-                        Aún no has registrado órdenes.
-                    </p>
-                {% endif %}
-            </section>
+                                <td>{{ o.worker_id if o.worker_id else "-" }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="empty-text">
+                    Aún no has registrado órdenes.
+                </p>
+            {% endif %}
+
+            <!-- Botón Actualizar solo si hubo procesamiento (hay logs) -->
+            {% if logs %}
+            <div class="orders-refresh">
+                <button type="button" class="btn primary" id="btn-refresh">
+                    Actualizar
+                </button>
+            </div>
+            {% endif %}
         </section>
 
-        <!-- PANEL DERECHO: LOGS -->
-        <section class="column column-right">
+        <!-- 3. SECUENCIA DE EVENTOS + BOTÓN REINICIAR ARRIBA -->
+        <div class="logs-wrapper panel-fijo">
+            <!-- Botón Reiniciar flotando ENCIMA del box, mismo estilo -->
+            <form class="reset-form" action="{{ url_for('reset_route') }}" method="post">
+                <button type="submit" class="btn primary reset-btn">
+                    Reiniciar
+                </button>
+            </form>
+
             <section class="card card-logs">
                 <div class="card-header">
                     <h2>Secuencia de eventos</h2>
@@ -151,9 +166,9 @@
 
                 {% if logs %}
                     <div id="logs-box" class="logs-box">
-                      {% for line in logs %}
-                        <div>{{ line }}</div>
-                      {% endfor %}
+                        {% for line in logs %}
+                            <div>{{ line }}</div>
+                        {% endfor %}
                     </div>
                 {% else %}
                     <p class="empty-text">
@@ -161,15 +176,19 @@
                     </p>
                 {% endif %}
             </section>
-        </section>
+        </div>
     </main>
 
+    <!-- FOOTER -->
     <footer class="app-footer">
-        Simulación académica de concurrencia con Python, hilos y Flask.
+        Proyecto Final sobre concurrencia utilizando Python, hilos y Flask.<br>
+        Asignatura: Sistemas Distribuidos<br>
+        Docente: Brayan Andru Montenegro.<br>
+        UNICUCES 2025
     </footer>
 </div>
 
-<!-- JSON con las tareas sugeridas para el JS -->
+<!-- JSON con las tareas sugeridas (se usa en el JS para tiempo/prioridad) -->
 <script id="tasks-data" type="application/json">
     {{ tasks|tojson }}
 </script>

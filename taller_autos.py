@@ -243,11 +243,11 @@ def process_orders():
 
     # Informe final detallado
     _log(
-        "🏁 Simulación finalizada: "
-        f"{total_ordenes} órdenes atendidas. "
-        f"Tiempo lógico total: {tiempo_logico_total} unidades. "
-        f"Tiempo lógico promedio por orden: {promedio_logico:.2f} unidades. "
-        f"Tiempo real aproximado de ejecución: {tiempo_real:.2f} segundos."
+        "🏁 Órdenes finalizadas: "
+        f"{total_ordenes} órdenes atendidas.\n"
+        f"* Tiempo lógico total: {tiempo_logico_total} unidades.\n"
+        f"* Tiempo lógico promedio por orden: {promedio_logico:.2f} unidades.\n"
+        f"* Tiempo real aproximado de ejecución: {tiempo_real:.2f} segundos."
     )
 
 
